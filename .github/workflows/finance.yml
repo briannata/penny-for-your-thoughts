@@ -8,9 +8,23 @@ on:
   # Lets you run it manually from the Actions tab too
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: budget-report
+  cancel-in-progress: false
+
 jobs:
   finance:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AI_MONTHLY_BUDGET_USD: '2.00'
+      AI_MAX_SUMMARIES_PER_RUN: '2'
+      BUDGET_YEAR: '2026'
+      INITIAL_COMPLETE_MONTHS: '2026-01,2026-02,2026-03,2026-04,2026-05,2026-06,2026-07,2026-08'
 
     steps:
       - name: Checkout repository
@@ -27,5 +41,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
       - name: Run finance
         run: python -m finance
+        env:
+          SOURCE_SHEET_URL: ${{ secrets.SOURCE_SHEET_URL }}
+          REPORT_SHEET_URL: ${{ secrets.REPORT_SHEET_URL }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
